@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+    <_name>Export all paths</_name>
+
+    <id>com.castle-kumley.export-all-paths</id>
+
+    <dependency type="executable" location="extensions">exportAllPaths.py</dependency>
+
+    <param name="out-directory" type="path" mode="folder" gui-text="Directory to which to export">~/</param>
+
+    <param name="exclude-prefix" type="string" gui-text="Prefix of layers to not export">-</param>
+
+    <label>
+        Any layer that does not begin with the given "Exclude Prefix" will export its paths.
+        Paths will be exported one by one as separate files.
+    </label>
+
+    <param name="fit-page-to-contents" type="optiongroup" appearance="minimal" gui-text="Export area">
+        <option value="true" selected="selected">Fit page to contents</option>
+        <option value="false">Leave page as is</option>
+    </param>
+
+    <label>
+        If "Fit Page to Contents" is selected, then the page size of each export will match the size of each path exported.
+    </label>
+
+    <param name="export-type" type="optiongroup" appearance="minimal" gui-text="Export type">
+        <option value="svg" selected="selected">SVG</option>
+        <option value="png">PNG</option>
+    </param>
+
+    <param name="export-dpi" type="int" min="1" max="1024" appearance="minimal" gui-text="DPI (for PNG)">96</param>
+
+    <effect needs-live-preview="false">
+        <object-type>all</object-type>
+        <effects-menu>
+            <submenu _name="Export"/>
+        </effects-menu>
+    </effect>
+
+    <script>
+        <command location="inx" interpreter="python">exportAllPaths.py</command>
+    </script>
+</inkscape-extension>
