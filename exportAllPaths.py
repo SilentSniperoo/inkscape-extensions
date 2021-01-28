@@ -19,7 +19,7 @@ def doPrint(string):
     if shouldPrint:
         print(string)
 
-def exportAllPaths(outDirectory, excludePrefix, fitPageToContents, exportType, exportDpi, tree):
+def exportAllPaths(outDirectory, excludePrefix, splitLayers, fitPageToContents, exportType, exportDpi, tree):
     root = tree.getroot()
     layersExcluded=[]
     layerPaths={}
@@ -54,13 +54,18 @@ def exportAllPaths(outDirectory, excludePrefix, fitPageToContents, exportType, e
                 if type(outStyle) is str:
                     outStyle = outStyle.replace('display:none', 'display:inline')
                     outLayer.set('style', outStyle)
-                # Remove all paths other than the one we want to export
-                for outPath in outLayer.findall(PATH_ELEMENT):
-                    outPathId = outPath.get(PATH_ID)
-                    if outPathId != pathId:
-                        outLayer.remove(outPath)
+                # Only remove the other paths if we are exporting one path at a time
+                if splitLayers:
+                    # Remove all paths other than the one we want to export
+                    for outPath in outLayer.findall(PATH_ELEMENT):
+                        outPathId = outPath.get(PATH_ID)
+                        if outPathId != pathId:
+                            outLayer.remove(outPath)
             # Record the destination
-            outFile = layerLabel + '_' + pathId + '.' + exportType
+            outFile = layerLabel
+            if splitLayers:
+                outFile += '_' + pathId
+            outFile += '.' + exportType
             outPath = os.path.join(outDirectory, outFile)
             # Create the post process command
             command = [
@@ -91,6 +96,9 @@ def exportAllPaths(outDirectory, excludePrefix, fitPageToContents, exportType, e
             thread = threading.Thread(target=runSubtask, args=(outFile, outPath, command, rootAsString))
             thread.start()
             subtaskThreads.append(thread)
+            # If exporting as a layer, rather than individual paths, go to next layer
+            if not splitLayers:
+                break
 
     for thread in subtaskThreads:
         thread.join()
@@ -108,6 +116,11 @@ class ExportAllPaths(inkex.Effect):
                                      dest='excludePrefix',
                                      default='-',
                                      help='Prefix of layers to not export')
+        self.arg_parser.add_argument('-s', '--split-layers',
+                                     type=inkex.Boolean,
+                                     dest='splitLayers',
+                                     default=True,
+                                     help='Export paths one by one as files')
         self.arg_parser.add_argument('-p', '--fit-page-to-contents',
                                      type=inkex.Boolean,
                                      dest='fitPageToContents',
@@ -134,6 +147,7 @@ class ExportAllPaths(inkex.Effect):
 
         exportAllPaths(outDirectory,
                        self.options.excludePrefix,
+                       self.options.splitLayers,
                        self.options.fitPageToContents,
                        self.options.exportType,
                        self.options.exportDpi,
@@ -160,22 +174,25 @@ def doCommandLine():
     # Get or default the prefix by which to exclude layers
     excludePrefix = sys.argv[3] if len(sys.argv) >= 4 else "-"
 
+    # Get or default the flag for splitting layers to their paths
+    splitLayers = sys.argv[4].lower() == 'true' if len(sys.argv) >= 5 else True
+
     # Get or default the flag for fitting the page size to export contents
-    fitPageToContents = sys.argv[4].lower() == 'true' if len(sys.argv) >= 5 else True
+    fitPageToContents = sys.argv[5].lower() == 'true' if len(sys.argv) >= 6 else True
 
     # Get or default the type of image to which to export the svg
-    exportType = sys.argv[5] if len(sys.argv) >= 6 else 'svg'
+    exportType = sys.argv[6] if len(sys.argv) >= 7 else 'svg'
 
     # Get or default the DPI at which to export the svg
     try:
-        exportDpi = int(sys.argv[6]) if len(sys.argv) >= 7 else 300
+        exportDpi = int(sys.argv[7]) if len(sys.argv) >= 8 else 300
     except:
         return
 
     # Parse the input file
     tree = ET.parse(sys.argv[1])
 
-    exportAllPaths(outDirectory, excludePrefix, fitPageToContents, exportType, exportDpi, tree)
+    exportAllPaths(outDirectory, excludePrefix, splitLayers, fitPageToContents, exportType, exportDpi, tree)
 
 if __name__ == '__main__':
     try:

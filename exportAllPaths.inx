@@ -11,8 +11,17 @@
     <param name="exclude-prefix" type="string" gui-text="Prefix of layers to not export">-</param>
 
     <label>
-        Any layer that does not begin with the given "Exclude Prefix" will export its paths.
-        Paths will be exported one by one as separate files.
+        Any layer that does not begin with the given "Exclude Prefix" will export.
+    </label>
+
+    <param name="split-layers" type="optiongroup" appearance="minimal" gui-text="Split layers">
+        <option value="true" selected="selected">Export paths as files</option>
+        <option value="false">Export layers as files</option>
+    </param>
+
+    <label>
+        If "Split layers" is selected, then paths will be exported one by one as separate files.
+        Otherwise, paths will be exported layer by layer as separate files.
     </label>
 
     <param name="fit-page-to-contents" type="optiongroup" appearance="minimal" gui-text="Export area">
@@ -21,7 +30,7 @@
     </param>
 
     <label>
-        If "Fit Page to Contents" is selected, then the page size of each export will match the size of each path exported.
+        If "Fit page to contents" is selected, then the page size of each export will match the size of each path exported.
     </label>
 
     <param name="export-type" type="optiongroup" appearance="minimal" gui-text="Export type">
@@ -29,7 +38,7 @@
         <option value="png">PNG</option>
     </param>
 
-    <param name="export-dpi" type="int" min="1" max="1024" appearance="minimal" gui-text="DPI (for PNG)">96</param>
+    <param name="export-dpi" type="int" min="1" max="1024" appearance="minimal" gui-text="DPI (if PNG)">96</param>
 
     <effect needs-live-preview="false">
         <object-type>all</object-type>
