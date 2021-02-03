@@ -1,2 +1,7 @@
 # inkscape-extensions
-Export all paths to separate SVG files. Exclude layers by a prefix to their name.
+
+Adds an extension window to Inkscape for exporting paths and exporting layers.
+
+- Export all layers or paths to separate files.
+- Export to SVG or PNG files.
+- Exclude layers by a name prefix (or the paths in those layers if exporting paths).
