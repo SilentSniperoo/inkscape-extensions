@@ -14,12 +14,34 @@ LAYER_LABEL = '{http://www.inkscape.org/namespaces/inkscape}label'
 PATH_ELEMENT = '{http://www.w3.org/2000/svg}path'
 PATH_ID = 'id'
 
-shouldPrint = False
-def doPrint(string):
-    if shouldPrint:
-        print(string)
+shouldLog = False
+logFile = False
+def setLogFile(path):
+    global shouldLog
+    global logFile
+    if logFile:
+        logFile.close()
+    if shouldLog and path:
+        logFile = open(path, "at", newline="\n")
+def logLine(string):
+    global shouldLog
+    global logFile
+    if shouldLog:
+        if logFile:
+            print(string, flush=True, file=logFile)
+        else:
+            print(string, flush=True)
 
 def exportAllPaths(outDirectory, excludePrefix, splitLayers, fitPageToContents, exportType, exportDpi, tree):
+    # Tilde means the user directory
+    if '~' in outDirectory:
+        outDirectory = outDirectory[outDirectory.find('~'):]
+        outDirectory = os.path.expanduser(outDirectory)
+    if not os.path.exists(outDirectory):
+        os.makedirs(outDirectory)
+
+    setLogFile(os.path.join(outDirectory, "exportAllPaths.log"))
+
     root = tree.getroot()
     layersExcluded=[]
     layerPaths={}
@@ -30,12 +52,17 @@ def exportAllPaths(outDirectory, excludePrefix, splitLayers, fitPageToContents, 
             layersExcluded.append(layerLabel)
             continue
         layerPaths[layerLabel] = []
-        for path in layer.findall(PATH_ELEMENT):
-            pathId = path.get(PATH_ID)
-            layerPaths[layerLabel].append(pathId)
+        groups = [layer]
+        while len(groups) > 0:
+            for group in groups[0].findall(GROUP_ELEMENT):
+                groups.append(group)
+            for path in groups[0].findall(PATH_ELEMENT):
+                pathId = path.get(PATH_ID)
+                layerPaths[layerLabel].append(pathId)
+            groups = groups[1:]
 
-    doPrint("Layers excluded: " + str(layersExcluded))
-    doPrint("Layers included: " + str(layerPaths))
+    logLine("Layers excluded: " + str(layersExcluded))
+    logLine("Layers included: " + str(layerPaths))
 
     # Export each path in each layer not excluded
     subtaskThreads = []
@@ -84,11 +111,11 @@ def exportAllPaths(outDirectory, excludePrefix, splitLayers, fitPageToContents, 
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE)
                 if result.returncode != 0:
-                    doPrint("Could not post-process '" + outFile + "'")
-                    doPrint(result.stderr)
+                    logLine("Could not post-process '" + outFile + "'")
+                    logLine(result.stderr)
                 else:
-                    doPrint("Finishing post-process '" + outFile + "'")
-                    doPrint("Writing result to '" + outPath + "'")
+                    logLine("Finishing post-process '" + outFile + "'")
+                    logLine("Writing result to '" + outPath + "'")
                     # Export the copied svg
                     outStream = os.open(outPath, os.O_RDWR | os.O_CREAT)
                     os.write(outStream, result.stdout)
@@ -138,14 +165,7 @@ class ExportAllPaths(inkex.Effect):
                                      help='PNG rasterization DPI')
 
     def effect(self):
-        outDirectory = self.options.outDirectory
-        if '~' in outDirectory:
-            outDirectory = outDirectory[outDirectory.find('~'):]
-            outDirectory = os.path.expanduser(outDirectory)
-        if not os.path.exists(outDirectory):
-            os.makedirs(outDirectory)
-
-        exportAllPaths(outDirectory,
+        exportAllPaths(self.options.outDirectory,
                        self.options.excludePrefix,
                        self.options.splitLayers,
                        self.options.fitPageToContents,
@@ -154,22 +174,20 @@ class ExportAllPaths(inkex.Effect):
                        self.document)
 
 def doCommandLine():
-    global shouldPrint
-    shouldPrint = True
+    global shouldLog
+    shouldLog = True
 
     # We at least need to know what svg we are splitting
     if len(sys.argv) < 2:
-        doPrint("Usage: exportAllPaths.py <svg/toSplit.svg> [output/directory/] [excludePrefix] [fitPageToContents] [exportType] [exportDpi]")
-        doPrint("If only one argument is given, the output directory will")
-        doPrint("be a directory of the same name and parent directory as")
-        doPrint("the input svg.")
+        logLine("Usage: exportAllPaths.py <svg/toSplit.svg> [output/directory/] [excludePrefix] [fitPageToContents] [exportType] [exportDpi]")
+        logLine("If only one argument is given, the output directory will")
+        logLine("be a directory of the same name and parent directory as")
+        logLine("the input svg.")
         exit(1)
 
     # Get or default the output directory
     outDirectory = sys.argv[2] if len(sys.argv) >= 3 else os.path.splitext(sys.argv[1])[0]
-    doPrint("Output directory: '" + outDirectory + "'")
-    if not os.path.exists(outDirectory):
-        os.makedirs(outDirectory)
+    logLine("Output directory: '" + outDirectory + "'")
 
     # Get or default the prefix by which to exclude layers
     excludePrefix = sys.argv[3] if len(sys.argv) >= 4 else "-"
@@ -200,3 +218,5 @@ if __name__ == '__main__':
     except Exception as e:
         inkex.errormsg(str(e))
         doCommandLine()
+    # Clean up loose file if it's still around
+    setLogFile(False)
